@@ -11,8 +11,8 @@ jobs:
     permissions:
       pull-requests: read
     outputs:
-      app1: ${{ steps.filter.outputs.consoleapp1 }}
-      app2: ${{ steps.filter.outputs.consoleapp2 }}
+      app1: ${{ steps.filter.outputs.ConsoleApp1 }}
+      app2: ${{ steps.filter.outputs.ConsoleApp4 }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,10 +22,10 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: |
-            consoleapp1:
-              - 'consoleapp1/**'
-            consoleapp2:
-              - 'consoleapp2/**'
+            ConsoleApp1:
+              - 'ConsoleApp1/**'
+            ConsoleApp4:
+              - 'ConsoleApp4/**'
           working-directory: ''  # ensure it's applied at the root :contentReference[oaicite:4]{index=4}
 
   build:
@@ -40,16 +40,16 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Build consoleapp1
+      - name: Build ConsoleApp1
         if: needs.detect_changes.outputs.app1 == 'true'
-        working-directory: consoleapp1
+        working-directory: ConsoleApp1
         run: |
           dotnet restore
           dotnet build --configuration Release
 
-      - name: Build consoleapp2
+      - name: Build ConsoleApp4
         if: needs.detect_changes.outputs.app2 == 'true'
-        working-directory: consoleapp2
+        working-directory: ConsoleApp4
         run: |
           dotnet restore
           dotnet build --configuration Release
