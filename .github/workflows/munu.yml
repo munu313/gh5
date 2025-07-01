@@ -1,15 +1,15 @@
-# .github/workflows/build-dynamic-dotnet6.yml
-
-name: Build Only Changed Console Apps (.NET 6)
+# .github/workflows/build-and-publish.yml
+name: Build and Publish Artifacts
 
 on:
   push:
-  pull_request:
+    paths:
+      - 'ConsoleApp1/**'
+      - 'ConsoleApp4/**'
 
 jobs:
-  detect:
+  detect_changes:
     runs-on: ubuntu-latest
-    permissions: pull-requests: read
     outputs:
       apps: ${{ steps.filter.outputs.changes }}
     steps:
@@ -25,18 +25,18 @@ jobs:
           list-files: 'json'
 
   build:
-    needs: detect
+    needs: detect_changes
     runs-on: ubuntu-latest
-    if: ${{ needs.detect.outputs.apps != '[]' && needs.detect.outputs.apps != '' }}
+    if: ${{ needs.detect_changes.outputs.apps != '[]' && needs.detect_changes.outputs.apps != '' }}
     strategy:
       matrix:
-        app: ${{ fromJson(needs.detect.outputs.apps) }}
+        app: ${{ fromJson(needs.detect_changes.outputs.apps) }}
     defaults:
       run:
         working-directory: ${{ matrix.app }}
     steps:
       - uses: actions/checkout@v4
-      - name: Setup .NET 6
+      - name: Setup .NET 6 SDK
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '6.0.x'
@@ -44,3 +44,16 @@ jobs:
         run: dotnet restore
       - name: Build ${{ matrix.app }}
         run: dotnet build --configuration Release
+
+  publish_artifact:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ needs.build.result == 'success' }}
+    steps:
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}-build
+          path: |
+            ConsoleApp1/bin/Release/net6.0/
+            ConsoleApp4/bin/Release/net6.0/
