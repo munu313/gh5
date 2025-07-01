@@ -1,0 +1,55 @@
+# .github/workflows/build-only-changed.yml
+name: Build Only Changed Console Apps
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  detect_changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      app1: ${{ steps.filter.outputs.consoleapp1 }}
+      app2: ${{ steps.filter.outputs.consoleapp2 }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect changed folders
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            consoleapp1:
+              - 'consoleapp1/**'
+            consoleapp2:
+              - 'consoleapp2/**'
+          working-directory: ''  # ensure it's applied at the root :contentReference[oaicite:4]{index=4}
+
+  build:
+    needs: detect_changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build consoleapp1
+        if: needs.detect_changes.outputs.app1 == 'true'
+        working-directory: consoleapp1
+        run: |
+          dotnet restore
+          dotnet build --configuration Release
+
+      - name: Build consoleapp2
+        if: needs.detect_changes.outputs.app2 == 'true'
+        working-directory: consoleapp2
+        run: |
+          dotnet restore
+          dotnet build --configuration Release
