@@ -1,4 +1,5 @@
 # .github/workflows/build-dynamic-dotnet6.yml
+
 name: Build Only Changed Console Apps (.NET 6)
 
 on:
@@ -8,8 +9,7 @@ on:
 jobs:
   detect:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
+    permissions: pull-requests: read
     outputs:
       apps: ${{ steps.filter.outputs.changes }}
     steps:
@@ -22,10 +22,12 @@ jobs:
               - 'ConsoleApp1/**'
             ConsoleApp4:
               - 'ConsoleApp4/**'
+          list-files: 'json'
 
   build:
     needs: detect
     runs-on: ubuntu-latest
+    if: ${{ needs.detect.outputs.apps != '[]' && needs.detect.outputs.apps != '' }}
     strategy:
       matrix:
         app: ${{ fromJson(needs.detect.outputs.apps) }}
@@ -34,14 +36,11 @@ jobs:
         working-directory: ${{ matrix.app }}
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup .NET 6
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '6.0.x'  # sets SDK version to .NET 6 :contentReference[oaicite:1]{index=1}
-
+          dotnet-version: '6.0.x'
       - name: Restore dependencies
         run: dotnet restore
-
       - name: Build ${{ matrix.app }}
         run: dotnet build --configuration Release
