@@ -1,55 +1,47 @@
-# .github/workflows/build-only-changed.yml
-name: Build Only Changed Console Apps
+# .github/workflows/build-dynamic-dotnet6.yml
+name: Build Only Changed Console Apps (.NET 6)
 
 on:
   push:
   pull_request:
 
 jobs:
-  detect_changes:
+  detect:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
     outputs:
-      app1: ${{ steps.filter.outputs.ConsoleApp1 }}
-      app2: ${{ steps.filter.outputs.ConsoleApp4 }}
+      apps: ${{ steps.filter.outputs.changes }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Detect changed folders
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
         id: filter
-        uses: dorny/paths-filter@v3
         with:
           filters: |
             ConsoleApp1:
               - 'ConsoleApp1/**'
             ConsoleApp4:
               - 'ConsoleApp4/**'
-          working-directory: ''  # ensure it's applied at the root :contentReference[oaicite:4]{index=4}
 
   build:
-    needs: detect_changes
+    needs: detect
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: ${{ fromJson(needs.detect.outputs.apps) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup .NET SDK
+      - name: Setup .NET 6
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '6.0.x'  # sets SDK version to .NET 6 :contentReference[oaicite:1]{index=1}
 
-      - name: Build ConsoleApp1
-        if: needs.detect_changes.outputs.app1 == 'true'
-        working-directory: ConsoleApp1
-        run: |
-          dotnet restore
-          dotnet build --configuration Release
+      - name: Restore dependencies
+        run: dotnet restore
 
-      - name: Build ConsoleApp4
-        if: needs.detect_changes.outputs.app2 == 'true'
-        working-directory: ConsoleApp4
-        run: |
-          dotnet restore
-          dotnet build --configuration Release
+      - name: Build ${{ matrix.app }}
+        run: dotnet build --configuration Release
