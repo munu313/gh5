@@ -1,12 +1,16 @@
-name: Build and Package
+name: Build and Package .NET Console Apps
 
 on:
   push:
     branches: [ main ]
-    paths-ignore:
-      - 'README.md'
+    paths:
+      - 'ConsoleApp1/**'
+      - 'ConsoleApp4/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'ConsoleApp1/**'
+      - 'ConsoleApp4/**'
 
 env:
   DOTNET_VERSION: '6.0.x'
@@ -28,9 +32,9 @@ jobs:
         with:
           filters: |
             consoleapp1:
-              - 'ConsoleApp1/ConsoleApp1/**'
+              - 'ConsoleApp1/**'
             consoleapp4:
-              - 'ConsoleApp4/ConsoleApp4/**'
+              - 'ConsoleApp4/**'
 
   build-and-package:
     needs: detect-changes
@@ -44,8 +48,13 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Restore dependencies for ConsoleApp1
+        if: needs.detect-changes.outputs.consoleapp1 == 'true'
+        run: dotnet restore ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj
+
+      - name: Restore dependencies for ConsoleApp4
+        if: needs.detect-changes.outputs.consoleapp4 == 'true'
+        run: dotnet restore ConsoleApp4/ConsoleApp4/ConsoleApp4.csproj
 
       - name: Build ConsoleApp1
         if: needs.detect-changes.outputs.consoleapp1 == 'true'
