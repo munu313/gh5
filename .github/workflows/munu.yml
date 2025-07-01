@@ -1,59 +1,78 @@
-# .github/workflows/build-and-publish.yml
-name: Build and Publish Artifacts
+name: Build and Package
 
 on:
   push:
-    paths:
-      - 'ConsoleApp1/**'
-      - 'ConsoleApp4/**'
+    branches: [ main ]
+    paths-ignore:
+      - 'README.md'
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOTNET_VERSION: '6.0.x'
+  OUTPUT_PATH: 'bin/Release/net6.0'
 
 jobs:
-  detect_changes:
-    runs-on: ubuntu-latest
-    outputs:
-      apps: ${{ steps.filter.outputs.changes }}
+  build-and-package:
+    runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Detect changes
+        id: changes
+        uses: dorny/paths-filter@v3
         with:
           filters: |
-            ConsoleApp1:
+            consoleapp1:
               - 'ConsoleApp1/**'
-            ConsoleApp4:
+            consoleapp2:
               - 'ConsoleApp4/**'
-          list-files: 'json'
 
-  build:
-    needs: detect_changes
-    runs-on: ubuntu-latest
-    if: ${{ needs.detect_changes.outputs.apps != '[]' && needs.detect_changes.outputs.apps != '' }}
-    strategy:
-      matrix:
-        app: ${{ fromJson(needs.detect_changes.outputs.apps) }}
-    defaults:
-      run:
-        working-directory: ${{ matrix.app }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup .NET 6 SDK
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '6.0.x'
       - name: Restore dependencies
         run: dotnet restore
-      - name: Build ${{ matrix.app }}
-        run: dotnet build --configuration Release
 
-  publish_artifact:
-    needs: build
-    runs-on: ubuntu-latest
-    if: ${{ needs.build.result == 'success' }}
-    steps:
-      - name: Upload Build Artifact
+      - name: Build ConsoleApp1
+        if: steps.changes.outputs.consoleapp1 == 'true'
+        run: dotnet build ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj --configuration Release --no-restore
+
+      - name: Build ConsoleApp2
+        if: steps.changes.outputs.consoleapp2 == 'true'
+        run: dotnet build ConsoleApp4/ConsoleApp4/ConsoleApp4.csproj --configuration Release --no-restore
+
+      - name: Run tests for ConsoleApp1
+        if: steps.changes.outputs.consoleapp1 == 'true'
+        run: dotnet test ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Run tests for ConsoleApp4
+        if: steps.changes.outputs.consoleapp2 == 'true'
+        run: dotnet test ConsoleApp4/ConsoleApp4/ConsoleApp4.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Publish ConsoleApp1
+        if: steps.changes.outputs.consoleapp1 == 'true'
+        run: dotnet publish ConsoleApp1/ConsoleApp1.csproj --configuration Release --output ${{ env.OUTPUT_PATH }}
+
+      - name: Publish ConsoleApp4
+        if: steps.changes.outputs.consoleapp2 == 'true'
+        run: dotnet publish ConsoleApp4/ConsoleApp4/ConsoleApp4.csproj --configuration Release --output ${{ env.OUTPUT_PATH }}
+
+      - name: Upload ConsoleApp1 artifact
+        if: steps.changes.outputs.consoleapp1 == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.app }}-build
-          path: |
-            ConsoleApp1/bin/Release/net6.0/
-            ConsoleApp4/bin/Release/net6.0/
+          name: consoleapp1-build
+          path: ${{ env.OUTPUT_PATH }}
+          retention-days: 7
+
+      - name: Upload ConsoleApp2 artifact
+        if: steps.changes.outputs.consoleapp2 == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: consoleapp2-build
+          path: ${{ env.OUTPUT_PATH }}
+          retention-days: 7
