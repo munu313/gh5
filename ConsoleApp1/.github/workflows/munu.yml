@@ -15,7 +15,6 @@ env:
 jobs:
   build-and-package:
     runs-on: windows-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -25,21 +24,55 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Detect changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            consoleapp1:
+              - 'ConsoleApp1/**'
+            consoleapp2:
+              - 'ConsoleApp4/**'
+
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build solution
-        run: dotnet build --configuration Release --no-restore
+      - name: Build ConsoleApp1
+        if: steps.changes.outputs.consoleapp1 == 'true'
+        run: dotnet build ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj --configuration Release --no-restore
 
-      - name: Run tests
-        run: dotnet test --configuration Release --no-build --verbosity normal
+      - name: Build ConsoleApp2
+        if: steps.changes.outputs.consoleapp2 == 'true'
+        run: dotnet build ConsoleApp4/ConsoleApp4/ConsoleApp4.csproj --configuration Release --no-restore
 
-      - name: Publish app
-        run: dotnet publish --configuration Release --output ${{ env.OUTPUT_PATH }}
+      - name: Run tests for ConsoleApp1
+        if: steps.changes.outputs.consoleapp1 == 'true'
+        run: dotnet test ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj --configuration Release --no-build --verbosity normal
 
-      - name: Upload build artifact
+      - name: Run tests for ConsoleApp4
+        if: steps.changes.outputs.consoleapp2 == 'true'
+        run: dotnet test ConsoleApp4/ConsoleApp4/ConsoleApp4.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Publish ConsoleApp1
+        if: steps.changes.outputs.consoleapp1 == 'true'
+        run: dotnet publish ConsoleApp1/ConsoleApp1.csproj --configuration Release --output ${{ env.OUTPUT_PATH }}
+
+      - name: Publish ConsoleApp4
+        if: steps.changes.outputs.consoleapp2 == 'true'
+        run: dotnet publish ConsoleApp4/ConsoleApp4/ConsoleApp4.csproj --configuration Release --output ${{ env.OUTPUT_PATH }}
+
+      - name: Upload ConsoleApp1 artifact
+        if: steps.changes.outputs.consoleapp1 == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: dotnet-build
+          name: consoleapp1-build
+          path: ${{ env.OUTPUT_PATH }}
+          retention-days: 7
+
+      - name: Upload ConsoleApp2 artifact
+        if: steps.changes.outputs.consoleapp2 == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: consoleapp2-build
           path: ${{ env.OUTPUT_PATH }}
           retention-days: 7
