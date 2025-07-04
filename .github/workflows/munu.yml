@@ -112,5 +112,5 @@ jobs:
         if: always()
         shell: powershell
         run: |
-          Remove-Item -Recurse -Force "${{ github.workspace }}\bin", "${{ github.workspace }}\obj"
+          Remove-Item -Recurse -Force "bin","obj" -ErrorAction SilentlyContinue
           Write-Host "Workspace cleaned."
