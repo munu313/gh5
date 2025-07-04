@@ -1,8 +1,5 @@
 name: Windows Self-Hosted Runner with Windows PowerShell
-
 on: [push]
-
-
 jobs:
   test:
     runs-on: self-hosted
