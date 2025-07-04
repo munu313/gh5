@@ -1,87 +1,10 @@
-name: Build and Package .NET Console Apps
+name: Windows Self-Hosted Runner Test
 
-on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'ConsoleApp1/**'
-      
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'ConsoleApp1/**'
-     
-env:
-  DOTNET_VERSION: '6.0.x'
-  OUTPUT_PATH: 'bin/Release/net6.0'
+on: [push]
 
 jobs:
-  detect-changes:
-    runs-on: windows-latest
-    outputs:
-      consoleapp1: ${{ steps.filter.outputs.consoleapp1 }}
-      consoleapp4: ${{ steps.filter.outputs.consoleapp4 }}
+  test:
+    runs-on: self-hosted
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Detect changes
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            consoleapp1:
-              - 'ConsoleApp1/**'
-           
-
-  build-and-package:
-    needs: detect-changes
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Restore dependencies for ConsoleApp1
-        if: needs.detect-changes.outputs.consoleapp1 == 'true'
-        run: dotnet restore ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj
-
-     
-
-      - name: Build ConsoleApp1
-        if: needs.detect-changes.outputs.consoleapp1 == 'true'
-        run: dotnet build ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj --configuration Release --no-restore
-
-     
-
-      - name: Run tests for ConsoleApp1
-        if: needs.detect-changes.outputs.consoleapp1 == 'true'
-        run: dotnet test ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj --configuration Release --no-build --verbosity normal
-
-    
-
-      - name: Publish ConsoleApp1
-        if: needs.detect-changes.outputs.consoleapp1 == 'true'
-        run: dotnet publish ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj --configuration Release --output ${{ env.OUTPUT_PATH }}
-
-
-
-      - name: Upload ConsoleApp1 artifact
-        if: needs.detect-changes.outputs.consoleapp1 == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: consoleapp1-build
-          path: ${{ env.OUTPUT_PATH }}
-          retention-days: 7
-
-      - name: Upload ConsoleApp4 artifact
-        if: needs.detect-changes.outputs.consoleapp4 == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: consoleapp4-build
-          path: ${{ env.OUTPUT_PATH }}
-          retention-days: 7
+      - run: echo "Running on Windows self-hosted runner!"
+      - run: systeminfo
