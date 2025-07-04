@@ -13,6 +13,9 @@ on:
       - 'ConsoleApp4/**'
 
 env:
+  # Force .NET SDK to install into a user-writable directory to avoid permission errors
+  DOTNET_INSTALL_DIR: '~\\AppData\\Local\\Microsoft\\dotnet'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_VERSION: '6.0.x'
   OUTPUT_PATH: 'bin/Release/net6.0'
 
@@ -22,11 +25,9 @@ jobs:
     outputs:
       consoleapp1: ${{ steps.filter.outputs.consoleapp1 }}
       consoleapp4: ${{ steps.filter.outputs.consoleapp4 }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
       - name: Detect changes
         id: filter
         uses: dorny/paths-filter@v3
@@ -40,18 +41,21 @@ jobs:
   build-and-package:
     needs: detect-changes
     runs-on: self-hosted
-    permissions:
-      contents: read
+    env:
+      DOTNET_INSTALL_DIR: ${{ env.DOTNET_INSTALL_DIR }}
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: ${{ env.DOTNET_SKIP_FIRST_TIME_EXPERIENCE }}
+      DOTNET_VERSION: ${{ env.DOTNET_VERSION }}
+      OUTPUT_PATH: ${{ env.OUTPUT_PATH }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup .NET (validate SDK)
+      - name: Setup .NET SDK locally
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-        # On a self-hosted runner, this adds SDK to PATH; SDK must already be installed :contentReference[oaicite:1]{index=1}
+        # Installs SDK into %USERPROFILE%\AppData\Local\Microsoft\dotnet, avoiding admin permissions :contentReference[oaicite:1]{index=1}
 
       - name: Cache NuGet packages
         if: needs.detect-changes.outputs.consoleapp1 == 'true' || needs.detect-changes.outputs.consoleapp4 == 'true'
@@ -59,7 +63,6 @@ jobs:
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: ${{ runner.os }}-nuget-
 
       # ConsoleApp1 steps
       - name: Restore ConsoleApp1
@@ -116,4 +119,4 @@ jobs:
         shell: powershell
         run: |
           Remove-Item -Recurse -Force "${{ github.workspace }}\*"
-          Write-Host "Workspace cleaned."  
+          Write-Host "Workspace cleaned."
