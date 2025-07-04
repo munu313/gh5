@@ -1,11 +1,25 @@
-name: Windows Self-Hosted Runner Test
+name: Windows Self-Hosted Workflow
 
-
-on: [push]
+on:
+  push:
+    branches: [ main ]
 
 jobs:
-  test:
+  windows-job:
+    name: Run on Windows Self-Hosted Runner
     runs-on: self-hosted
+    # Optionally specify OS if multiple runners
+    # labels are registered: runs-on: [self-hosted, windows]
+
     steps:
-      - run: echo "Running on Windows self-hosted runner!"
-      - run: systeminfo
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set PowerShell Execution Policy
+        run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+        shell: pwsh
+
+      - name: Run PowerShell Script
+        run: echo "Running on Windows self-hosted runner!"
+        shell: pwsh
+
