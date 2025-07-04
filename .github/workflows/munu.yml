@@ -47,11 +47,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup .NET (validate SDK)
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-        # On a self-hosted runner, this adds SDK to PATH; SDK must already be installed :contentReference[oaicite:1]{index=1}
+      - name: Check .NET SDK version (validate pre-installed)
+        run: dotnet --version
 
       - name: Cache NuGet packages
         if: needs.detect-changes.outputs.consoleapp1 == 'true' || needs.detect-changes.outputs.consoleapp4 == 'true'
@@ -115,5 +112,5 @@ jobs:
         if: always()
         shell: powershell
         run: |
-          Remove-Item -Recurse -Force "${{ github.workspace }}\*"
-          Write-Host "Workspace cleaned."  
+          Remove-Item -Recurse -Force "${{ github.workspace }}\bin", "${{ github.workspace }}\obj"
+          Write-Host "Workspace cleaned."
