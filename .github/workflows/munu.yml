@@ -106,11 +106,6 @@ jobs:
         with:
           name: consoleapp4-build
           path: ${{ env.OUTPUT_PATH }}/ConsoleApp4
-          retention-days: 7
+          retention-days: 1
 
-      - name: Cleanup workspace
-        if: always()
-        shell: powershell
-        run: |
-          Remove-Item -Recurse -Force "bin","obj" -ErrorAction SilentlyContinue
-          Write-Host "Workspace cleaned."
+     
