@@ -1,15 +1,119 @@
-name: Windows Self-Hosted Runner with Windows PowerShell
+name: Build and Package .NET Console Apps (Self‑Hosted Runner)
 
-on: [push]
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ConsoleApp1/**'
+      - 'ConsoleApp4/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ConsoleApp1/**'
+      - 'ConsoleApp4/**'
+
+env:
+  DOTNET_VERSION: '6.0.x'
+  OUTPUT_PATH: 'bin/Release/net6.0'
 
 jobs:
-  test:
+  detect-changes:
     runs-on: self-hosted
-    defaults:
-      run:
-        shell: powershell  # 👈 Explicitly use Windows PowerShell
+    outputs:
+      consoleapp1: ${{ steps.filter.outputs.consoleapp1 }}
+      consoleapp4: ${{ steps.filter.outputs.consoleapp4 }}
+
     steps:
-      - name: Say Hello
-        run: echo "✅ Running on Windows self-hosted runner using Windows PowerShell!"
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
+      - name: Detect changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            consoleapp1:
+              - 'ConsoleApp1/**'
+            consoleapp4:
+              - 'ConsoleApp4/**'
 
+  build-and-package:
+    needs: detect-changes
+    runs-on: self-hosted
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup .NET (validate SDK)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+        # On a self-hosted runner, this adds SDK to PATH; SDK must already be installed :contentReference[oaicite:1]{index=1}
+
+      - name: Cache NuGet packages
+        if: needs.detect-changes.outputs.consoleapp1 == 'true' || needs.detect-changes.outputs.consoleapp4 == 'true'
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      # ConsoleApp1 steps
+      - name: Restore ConsoleApp1
+        if: needs.detect-changes.outputs.consoleapp1 == 'true'
+        run: dotnet restore ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj
+
+      - name: Build ConsoleApp1
+        if: needs.detect-changes.outputs.consoleapp1 == 'true'
+        run: dotnet build ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj -c Release --no-restore
+
+      - name: Test ConsoleApp1
+        if: needs.detect-changes.outputs.consoleapp1 == 'true'
+        run: dotnet test ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj -c Release --no-build --verbosity normal
+
+      - name: Publish ConsoleApp1
+        if: needs.detect-changes.outputs.consoleapp1 == 'true'
+        run: dotnet publish ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj -c Release -o ${{ env.OUTPUT_PATH }}/ConsoleApp1
+
+      - name: Upload ConsoleApp1 artifact
+        if: needs.detect-changes.outputs.consoleapp1 == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: consoleapp1-build
+          path: ${{ env.OUTPUT_PATH }}/ConsoleApp1
+          retention-days: 7
+
+      # ConsoleApp4 steps
+      - name: Restore ConsoleApp4
+        if: needs.detect-changes.outputs.consoleapp4 == 'true'
+        run: dotnet restore ConsoleApp4/ConsoleApp4/ConsoleApp4.csproj
+
+      - name: Build ConsoleApp4
+        if: needs.detect-changes.outputs.consoleapp4 == 'true'
+        run: dotnet build ConsoleApp4/ConsoleApp4/ConsoleApp4.csproj -c Release --no-restore
+
+      - name: Test ConsoleApp4
+        if: needs.detect-changes.outputs.consoleapp4 == 'true'
+        run: dotnet test ConsoleApp4/ConsoleApp4/ConsoleApp4.csproj -c Release --no-build --verbosity normal
+
+      - name: Publish ConsoleApp4
+        if: needs.detect-changes.outputs.consoleapp4 == 'true'
+        run: dotnet publish ConsoleApp4/ConsoleApp4/ConsoleApp4.csproj -c Release -o ${{ env.OUTPUT_PATH }}/ConsoleApp4
+
+      - name: Upload ConsoleApp4 artifact
+        if: needs.detect-changes.outputs.consoleapp4 == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: consoleapp4-build
+          path: ${{ env.OUTPUT_PATH }}/ConsoleApp4
+          retention-days: 7
+
+      - name: Cleanup workspace
+        if: always()
+        shell: powershell
+        run: |
+          Remove-Item -Recurse -Force "${{ github.workspace }}\*"
+          Write-Host "Workspace cleaned."  
